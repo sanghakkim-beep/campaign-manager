@@ -1,10 +1,11 @@
 export interface Brand {
   id: string;
   name: string;
+  manager: string;
   budget: number;
   spent: number;
   spentRate: string;
-  remaining: number;
+  description: string;
 }
 
 export interface Campaign {
