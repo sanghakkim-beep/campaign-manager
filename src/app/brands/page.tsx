@@ -11,7 +11,7 @@ function BrandCard({ brand }: { brand: Brand }) {
   const remaining = brand.budget - brand.spent;
 
   return (
-    <div className="rounded-xl border border-zinc-200 bg-white p-6 shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
+    <div className="rounded-xl border border-zinc-200 bg-white p-6 shadow-sm transition-shadow hover:shadow-md cursor-pointer dark:border-zinc-800 dark:bg-zinc-900">
       <div className="flex items-start justify-between">
         <div>
           <p className="text-xs font-medium text-zinc-400">{brand.id}</p>
@@ -88,7 +88,9 @@ export default async function BrandsPage() {
 
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
         {brands.map((brand) => (
-          <BrandCard key={brand.id} brand={brand} />
+          <Link key={brand.id} href={`/brands/${brand.id}`} className="block">
+            <BrandCard brand={brand} />
+          </Link>
         ))}
       </div>
     </main>

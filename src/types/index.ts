@@ -8,14 +8,19 @@ export interface Brand {
   description: string;
 }
 
+export type CampaignStatus = "계획중" | "진행중" | "완료" | "취소";
+
 export interface Campaign {
   id: string;
   brandId: string;
   name: string;
   startDate: string;
   endDate: string;
-  status: "planned" | "active" | "completed" | "cancelled";
-  description?: string;
+  plannedBudget: number;
+  actualBudget: number;
+  budgetRate: string;
+  status: CampaignStatus;
+  progress: string;
 }
 
 export interface Milestone {
@@ -23,6 +28,8 @@ export interface Milestone {
   campaignId: string;
   name: string;
   dueDate: string;
+  manager: string;
   completed: boolean;
-  description?: string;
+  campaignName: string;
+  notes: string;
 }

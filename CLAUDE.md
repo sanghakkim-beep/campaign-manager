@@ -40,16 +40,39 @@ The spreadsheet has four tabs. Each tab's row 0 is a title, row 1 is headers, da
 
 ### Key files
 
-- `src/lib/sheets.ts` — all Sheets I/O: `fetchCsv()`, `getBrands()`, `addBrand()`, `getAccessToken()`
-- `src/types/index.ts` — `Brand`, `Campaign`, `Milestone` interfaces
-- `src/app/brands/actions.ts` — Server Actions for brand mutations
+- `src/lib/sheets.ts` — all Sheets I/O. Read functions: `getBrands()`, `getBrand(id)`, `getCampaigns(brandId?)`, `getMilestones(campaignIds[])`. Write functions: `addBrand()` (POST append), `updateBrand()` (PUT to specific row). Auth: `getAccessToken()` via manual JWT.
+- `src/types/index.ts` — `Brand`, `Campaign` (+ `CampaignStatus` union), `Milestone` interfaces. Always update here first when adding columns.
+- `src/app/brands/[id]/actions.ts` — `editBrand(id, formData)` — edit actions take the entity ID as first arg, bound via `Function.prototype.bind` before passing to `useActionState`.
+
+### Write API patterns
+
+**Create** (append new row):
+```
+POST /v4/spreadsheets/{ID}/values/{SheetName}!A:G:append?valueInputOption=USER_ENTERED
+```
+
+**Update** (overwrite existing row — must find row number first):
+```
+PUT /v4/spreadsheets/{ID}/values/{SheetName}!A{row}:G{row}?valueInputOption=USER_ENTERED
+```
+Row number = `physicalIndex + 3` where `physicalIndex` is the 0-based index into `rows.slice(2)` (skipping title and header rows). Sheets API is 1-indexed, so data row 0 → sheet row 3.
 
 ### Patterns in use
 
 - Pages are **async Server Components** that call `lib/sheets.ts` directly.
 - Mutations go through **Server Actions** (`'use server'`) in `src/app/[route]/actions.ts`, followed by `revalidatePath()` + `redirect()`.
-- Forms use `useActionState` (React 19) + `useFormStatus` for pending state in Client Components.
-- Each new entity type follows: add interface to `types/index.ts` → add read/write fns to `sheets.ts` → create route folder with `page.tsx`, `actions.ts`, `loading.tsx`.
+- Forms use `useActionState` (React 19) + `useFormStatus` for pending state in Client Components. Edit forms pre-populate via `defaultValue` props passed from a Server Component wrapper.
+- Server Actions that need extra args (e.g., entity ID) use `.bind(null, id)` before passing to `useActionState` — not hidden form fields.
+- Each new entity type follows: add interface to `types/index.ts` → add read/write fns to `sheets.ts` → create route folder with `page.tsx`, `actions.ts`, `loading.tsx`. Detail/edit pages go under `[id]/`.
+
+### Route structure (brands as the reference implementation)
+
+```
+/brands              → list page (BrandCard grid)
+/brands/new          → create form
+/brands/[id]         → detail: brand info + campaigns + milestones
+/brands/[id]/edit    → edit form (Server Component wrapper → Client Component form)
+```
 
 ## Environment variables
 
