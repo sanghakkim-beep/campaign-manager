@@ -1,4 +1,4 @@
-import { eq, inArray, sql } from "drizzle-orm";
+import { and, eq, gt, inArray, lte, sql } from "drizzle-orm";
 import { db } from "@/lib/db";
 import { brands, campaigns, milestones } from "../../drizzle/schema";
 import type { Brand, Campaign, CampaignStatus, Milestone } from "@/types";
@@ -144,4 +144,154 @@ export async function updateBrand(
       description:  brand.description,
     })
     .where(eq(brands.code, brand.id));
+}
+
+export interface DashboardData {
+  summary: {
+    brandCount: number;
+    totalBudget: number;
+    totalSpent: number;
+    activeCampaignCount: number;
+    upcomingMilestoneCount: number;
+  };
+  campaignStatusCounts: Record<string, number>;
+  activeCampaigns: {
+    id: string;
+    name: string;
+    brandName: string;
+    endDate: string;
+    progress: number;
+    budgetRate: string;
+  }[];
+  upcomingMilestones: {
+    id: string;
+    name: string;
+    campaignName: string;
+    brandName: string;
+    dueDate: string;
+    manager: string;
+  }[];
+  brandBudgets: {
+    id: string;
+    name: string;
+    budget: number;
+    spent: number;
+    spentRate: string;
+  }[];
+}
+
+export async function getDashboardData(): Promise<DashboardData> {
+  const today = new Date().toISOString().slice(0, 10);
+  const in14days = new Date(Date.now() + 14 * 86400_000).toISOString().slice(0, 10);
+
+  const [summaryRows, statusRows, activeCampaignRows, upcomingRows, brandBudgetRows] =
+    await Promise.all([
+      // Summary totals
+      db
+        .select({
+          brandCount:  sql<number>`COUNT(DISTINCT ${brands.id})`,
+          totalBudget: sql<number>`COALESCE(SUM(DISTINCT ${brands.annualBudget}), 0)`,
+          totalSpent:  sql<number>`COALESCE(SUM(${campaigns.actualBudget}), 0)`,
+        })
+        .from(brands)
+        .leftJoin(campaigns, eq(campaigns.brandId, brands.id)),
+
+      // Campaign counts by status
+      db
+        .select({ status: campaigns.status, count: sql<number>`COUNT(*)` })
+        .from(campaigns)
+        .groupBy(campaigns.status),
+
+      // Active campaigns (진행중) with progress
+      db
+        .select({
+          id:       campaigns.code,
+          name:     campaigns.name,
+          brandName: brands.name,
+          endDate:  campaigns.endDate,
+          progress: progressSql,
+          plannedBudget: campaigns.plannedBudget,
+          actualBudget:  campaigns.actualBudget,
+        })
+        .from(campaigns)
+        .innerJoin(brands, eq(campaigns.brandId, brands.id))
+        .leftJoin(milestones, eq(milestones.campaignId, campaigns.id))
+        .where(eq(campaigns.status, "진행중"))
+        .groupBy(campaigns.id, brands.id)
+        .orderBy(campaigns.endDate),
+
+      // Upcoming milestones (not completed, due within 14 days)
+      db
+        .select({
+          id:           milestones.code,
+          name:         milestones.name,
+          campaignName: campaigns.name,
+          brandName:    brands.name,
+          dueDate:      milestones.dueDate,
+          manager:      milestones.manager,
+        })
+        .from(milestones)
+        .innerJoin(campaigns, eq(milestones.campaignId, campaigns.id))
+        .innerJoin(brands, eq(campaigns.brandId, brands.id))
+        .where(
+          and(
+            eq(milestones.completed, false),
+            gt(milestones.dueDate, today),
+            lte(milestones.dueDate, in14days),
+          )
+        )
+        .orderBy(milestones.dueDate),
+
+      // Brand budget overview
+      db
+        .select({
+          id:     brands.code,
+          name:   brands.name,
+          budget: brands.annualBudget,
+          spent:  sql<number>`COALESCE(SUM(${campaigns.actualBudget}), 0)`,
+        })
+        .from(brands)
+        .leftJoin(campaigns, eq(campaigns.brandId, brands.id))
+        .groupBy(brands.id)
+        .orderBy(brands.code),
+    ]);
+
+  const summary = summaryRows[0];
+  const activeCampaignCount = statusRows.find((r) => r.status === "진행중")?.count ?? 0;
+
+  return {
+    summary: {
+      brandCount:             Number(summary.brandCount),
+      totalBudget:            Number(summary.totalBudget),
+      totalSpent:             Number(summary.totalSpent),
+      activeCampaignCount:    Number(activeCampaignCount),
+      upcomingMilestoneCount: upcomingRows.length,
+    },
+    campaignStatusCounts: Object.fromEntries(
+      statusRows.map((r) => [r.status, Number(r.count)])
+    ),
+    activeCampaigns: activeCampaignRows.map((r) => ({
+      id:        r.id,
+      name:      r.name,
+      brandName: r.brandName,
+      endDate:   r.endDate ?? "",
+      progress:  Number(r.progress),
+      budgetRate: toBudgetRate(r.actualBudget, r.plannedBudget),
+    })),
+    upcomingMilestones: upcomingRows.map((r) => ({
+      id:           r.id,
+      name:         r.name,
+      campaignName: r.campaignName,
+      brandName:    r.brandName,
+      dueDate:      r.dueDate ?? "",
+      manager:      r.manager,
+    })),
+    brandBudgets: brandBudgetRows.map((r) => ({
+      id:        r.id,
+      name:      r.name,
+      budget:    r.budget,
+      spent:     Number(r.spent),
+      spentRate: toSpentRate(Number(r.spent), r.budget),
+    })),
+  };
 }
