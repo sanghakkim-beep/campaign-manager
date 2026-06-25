@@ -1,6 +1,6 @@
 "use server";
 
-import { getBrands, addBrand } from "@/lib/sheets";
+import { addBrand, getNextBrandCode } from "@/lib/queries";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
@@ -12,13 +12,11 @@ export async function createBrand(formData: FormData) {
   );
   const description = (formData.get("description") as string)?.trim() ?? "";
 
-  if (!name || !manager || !budget) {
+  if (!name || !manager || isNaN(budget)) {
     throw new Error("브랜드명, 담당자, 연간예산은 필수입니다.");
   }
 
-  const brands = await getBrands();
-  const nextNum = brands.length + 1;
-  const id = `BRD${String(nextNum).padStart(3, "0")}`;
+  const id = await getNextBrandCode();
 
   await addBrand({ id, name, manager, budget, spent: 0, description });
 

@@ -8,7 +8,7 @@ export interface Brand {
   description: string;
 }
 
-export type CampaignStatus = "계획중" | "진행중" | "완료" | "취소";
+export type CampaignStatus = "계획중" | "준비중" | "진행중" | "완료" | "취소";
 
 export interface Campaign {
   id: string;

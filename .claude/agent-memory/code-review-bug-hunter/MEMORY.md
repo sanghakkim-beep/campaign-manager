@@ -1,0 +1,2 @@
+- [Project Architecture](project-architecture.md) — baseline architecture facts confirmed in first full review (2026-06-25)
+- [UUID vs Code Bug Pattern](uuid-vs-code-bug-pattern.md) — recurring risk: confusing UUID PK with code business key in WHERE clauses

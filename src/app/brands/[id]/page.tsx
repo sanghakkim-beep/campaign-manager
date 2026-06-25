@@ -1,10 +1,11 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { getBrand, getCampaigns, getMilestones } from "@/lib/sheets";
+import { getBrand, getCampaigns, getMilestones } from "@/lib/queries";
 import type { CampaignStatus, Milestone } from "@/types";
 
 const STATUS_BADGE: Record<CampaignStatus, { label: string; className: string }> = {
   "계획중": { label: "계획중", className: "bg-zinc-100 text-zinc-600 dark:bg-zinc-800 dark:text-zinc-300" },
+  "준비중": { label: "준비중", className: "bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400" },
   "진행중": { label: "진행중", className: "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400" },
   "완료":   { label: "완료",   className: "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400" },
   "취소":   { label: "취소",   className: "bg-red-100 text-red-600 dark:bg-red-900/30 dark:text-red-400" },

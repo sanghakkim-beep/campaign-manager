@@ -1,5 +1,5 @@
 import { notFound } from "next/navigation";
-import { getBrand } from "@/lib/sheets";
+import { getBrand } from "@/lib/queries";
 import EditBrandForm from "./EditBrandForm";
 
 export default async function EditBrandPage({

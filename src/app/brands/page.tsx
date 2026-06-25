@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { getBrands } from "@/lib/sheets";
+import { getBrands } from "@/lib/queries";
 import type { Brand } from "@/types";
 
 function formatKRW(n: number) {

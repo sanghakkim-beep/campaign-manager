@@ -1,6 +1,6 @@
 "use server";
 
-import { updateBrand } from "@/lib/sheets";
+import { updateBrand } from "@/lib/queries";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
@@ -12,7 +12,7 @@ export async function editBrand(id: string, formData: FormData) {
   );
   const description = (formData.get("description") as string)?.trim() ?? "";
 
-  if (!name || !manager || !budget) {
+  if (!name || !manager || isNaN(budget)) {
     throw new Error("브랜드명, 담당자, 연간예산은 필수입니다.");
   }
 
